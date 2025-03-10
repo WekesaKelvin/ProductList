@@ -8,13 +8,11 @@ import { provideRouter, RouterModule, Routes } from '@angular/router';
     standalone: true,
     imports: [CommonModule, RouterModule], 
     templateUrl: './home.component.html',
-    styleUrls: ['./home.component.css']
+    styleUrls: ['./home.component.css'],
 })
 export class HomeComponent {
     userName: string = 'Kelvin Wekesa';
 }
 
 
-bootstrapApplication(HomeComponent, {
-    providers: [provideRouter([])], 
-}).catch(err => console.error(err));
+

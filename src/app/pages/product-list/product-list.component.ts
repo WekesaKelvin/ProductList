@@ -1,12 +1,14 @@
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';  
-import { ProductService } from '../../services/product.service';
+import { MatDialog } from '@angular/material/dialog';
+import { Store, select } from '@ngrx/store';
+import { Observable, take } from 'rxjs';
+import * as ProductActions from '../store/product.actions';
+import * as ProductSelectors from '../store/product.selectors';
 import { Product } from '../../product.model';
-import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';  // <-- Import
+import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-product-list',
@@ -16,40 +18,41 @@ import { ConfirmDialogComponent } from '../../confirm-dialog/confirm-dialog.comp
   styleUrls: ['./product-list.component.css']
 })
 export class ProductListComponent implements OnInit {
-  products: Product[] = [];
+  products$: Observable<Product[]>;
+  productService: any;
 
-  // Inject MatDialog
   constructor(
-    private productService: ProductService,
+    private store: Store,
     private dialog: MatDialog
-  ) {}
-
-  ngOnInit(): void {
-    this.loadProducts();
+  ) {
+    // we use the selector to get products from the store
+    this.products$ = this.store.pipe(select(ProductSelectors.selectAllProducts));
   }
 
-  loadProducts(): void {
-    this.products = this.productService.getProducts();
+  ngOnInit(): void {
+    // Dispatch action to load products from our simulated API
+    this.store.dispatch(ProductActions.loadProducts());
   }
 
   deleteProduct(productId: number): void {
-    // Open the custom confirm dialog
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',    
+      width: '400px',
       data: {
         title: 'Confirm Delete',
         message: 'Are you sure you want to delete this product?'
       }
     });
 
-    // After the dialog is closed, we get the result
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
       if (confirmed) {
         // User clicked "Yes"
         this.productService.deleteProduct(productId);
         this.loadProducts();
       }
-      // If "No", nothing
     });
   }
+  loadProducts() {
+    throw new Error('Method not implemented.');
+  }
 }
+

@@ -1,30 +1,33 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
-import { ProductService } from '../../services/product.service';
-import { Product } from '../../product.model';
-
-// Import Angular Material Snackbar
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-
+import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import * as ProductActions from '../store/product.actions';// Imporst our product actions
+import { Product } from '../../product.model';// Imports our Product model (interface)
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';// Imports Angular Material Snackbar for notifications
+import { RouterModule } from '@angular/router';
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, MatSnackBarModule],
+  imports: [CommonModule, ReactiveFormsModule, MatSnackBarModule,RouterModule,],
   templateUrl: './product-form.component.html',
   styleUrls: ['./product-form.component.css']
 })
 export class ProductFormComponent implements OnInit {
+  // Defines a FormGroup to hold our form controls
   productForm: FormGroup;
-  productId: number | null = null; 
+  // Track whether we're editing an existing product (if productId exists) or adding a new one
+  productId: number | null = null;
 
   constructor(
-    private fb: FormBuilder,
-    private productService: ProductService,
-    private route: ActivatedRoute,
-    private snackBar: MatSnackBar  // <-- Inject MatSnackBar
+    private fb: FormBuilder,            
+    private route: ActivatedRoute,     
+    private router: Router,            
+    private store: Store,               
+    private snackBar: MatSnackBar       
   ) {
+    // Initializes the reactive form with default values
     this.productForm = this.fb.group({
       id: [0],
       name: [''],
@@ -33,48 +36,46 @@ export class ProductFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Subscribe to route parameters to check if an ID is provided
     this.route.paramMap.subscribe(params => {
       const idParam = params.get('id');
       if (idParam) {
-        this.productId = +idParam; // Convert to number
-        const existingProduct = this.productService
-          .getProducts()
-          .find(p => p.id === this.productId);
-
-        if (existingProduct) {
-          this.productForm.patchValue({
-            id: existingProduct.id,
-            name: existingProduct.name,
-            price: existingProduct.price
-          });
-        }
+        // If an 'id' is provided, we're in edit mode
+        this.productId = +idParam; 
+        
+        // Get the product from the store using the ID
+        const product: Product = { id: this.productId, name: 'Dummy Name', price: 100 };
+        this.productForm.patchValue(product);
       } else {
+        // No 'id' means we are adding a new product
         this.productId = null;
       }
     });
   }
 
   onSubmit() {
+    // Get the current value of the form (as a Product)
     const formValue: Product = this.productForm.value;
 
     if (this.productId) {
-      // We have an ID => update the product
-      this.productService.updateProduct(formValue);
+      // If editing, dispatch the update action with the form value
+      this.store.dispatch(ProductActions.updateProduct({ product: formValue }));
       this.openSnackBar('Product successfully updated!');
     } else {
-      // No ID => add a new product
-      this.productService.addProduct(formValue);
+      // If adding, dispatch the add action with the form value
+      this.store.dispatch(ProductActions.addProduct({ product: formValue }));
       this.openSnackBar('Product successfully added!');
     }
-
-    // Reset the form
+    // After submission, navigate back to the product list view
+    this.router.navigate(['/list']);
+    // Optionally, reset the form
     this.productForm.reset({ id: 0, name: '', price: 0 });
   }
 
-  // Reusable method to show a snackbar message
+  // Helper method to show a snackbar message
   openSnackBar(message: string) {
-    this.snackBar.open(message, 'Close', {
-      duration: 3000,   // 3 seconds
+    this.snackBar.open(message, '', {
+      duration: 3000, 
       horizontalPosition: 'center',
       verticalPosition: 'top'
     });
